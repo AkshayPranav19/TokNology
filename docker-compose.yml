@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  lawfinder:
+    build:
+      context: ./lawfinder_gemini_env      # <— build from the service folder
+      dockerfile: Dockerfile
+    image: lawfinder-gemini:latest
+    container_name: lawfinder-gemini
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env                              # <— ROOT .env (GOOGLE_API_KEY=...)
+    environment:
+      UVICORN_WORKERS: "1"
+    volumes:
+      # persist indices on your host (root-level folder), mount to container path
+      - ./lawfinder_gemini_env/indices:/app/indices
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
