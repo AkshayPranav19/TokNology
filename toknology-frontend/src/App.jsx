@@ -4,6 +4,7 @@ import IntakeForm from './components/IntakeForm.jsx'
 import ResultsPane from './components/ResultsPane.jsx'
 import FeedbackPane from './components/FeedbackPane.jsx'
 import LearningDrawer from './components/LearningDrawer.jsx'
+import TokBot from './components/TokBot.jsx';
 import AuditLog from './components/AuditLog.jsx'
 import { Card, SectionTitle } from './components/Primitives.jsx'
 import useDummyAnalyzer from './hooks/useDummyAnalyzer.js'
@@ -109,6 +110,9 @@ export default function App() {
           />
         </div>
       </main>
+        <div className="fixed right-6 bottom-20 hidden lg:block">
+    <TokBot regions={regions} />
+  </div>
       <LearningDrawer show={showLearning} onClose={()=>setShowLearning(false)} comments={comments} />
       <footer className="mx-auto max-w-6xl px-4 pb-10 pt-4 text-xs text-zinc-500">© 2025 TokNology (frontend mock). Demo shows case close, agent steps, feedback reset, and export flows.</footer>
     </div>
