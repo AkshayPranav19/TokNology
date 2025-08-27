@@ -1,0 +1,35 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lawfinder"
+version = "0.3.1"
+description = "LawFinder A1 with Gemini, region guardrails, LLM re-ranking, PDF extraction, and .env autoload"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2",
+  "beautifulsoup4",
+  "httpx",
+  "ddgs",
+  "langchain>=0.2",
+  "langchain-community>=0.2",
+  "langchain-text-splitters",
+  "langchain-google-genai",
+  "google-generativeai",
+  "chromadb",
+  "fastapi",
+  "uvicorn[standard]",
+  "python-dotenv",
+  "pdfminer.six"
+]
+
+[tool.setuptools]
+# 👇 Only package the 'lawfinder' module; ignore 'indices' and other folders.
+packages = ["lawfinder"]
+
+[tool.setuptools.package-data]
+# include nothing special; adjust if you later add templates/static files
+lawfinder = []

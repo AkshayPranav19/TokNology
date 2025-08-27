@@ -1,0 +1,14 @@
+pydantic>=2
+beautifulsoup4
+httpx
+ddgs
+langchain>=0.2
+langchain-community>=0.2
+langchain-text-splitters
+langchain-google-genai
+google-generativeai
+chromadb
+fastapi
+uvicorn[standard]
+python-dotenv
+pdfminer.six
