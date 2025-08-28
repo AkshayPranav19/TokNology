@@ -1,3 +1,4 @@
+
 version: "3.9"
 
 services:
@@ -23,3 +24,104 @@ services:
       retries: 5
       start_period: 15s
     restart: unless-stopped
+
+  risk_evaluator:
+    build:
+      context: ./risk_evaluator
+      dockerfile: Dockerfile
+    image: risk-evaluator:latest
+    container_name: risk-evaluator
+    ports:
+      - "18002:18002"
+    env_file:
+      - ./.env              # optional: will use GOOGLE_API_KEY if present
+    environment:
+      PORT: "18002"         # your app reads PORT and defaults to 18002
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:18002/"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+
+# version: "3.9"
+
+# services:
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     image: toknology-backend:dev
+#     container_name: toknology-backend
+#     ports:
+#       - "5050:5050"
+#     env_file:
+#       - ./backend/.env                  # use the backend env (Supabase keys)
+#     environment:
+#       NODE_ENV: development
+#       PORT: "5050"
+#       # talk to services inside this compose network
+#       AGENT1_URL: http://lawfinder:8000/v1/run
+#       AGENT2_URL: http://risk_evaluator:18002/agent3/assess-demo
+#       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+#       CHOKIDAR_USEPOLLING: "true"
+#       WATCHPACK_POLLING: "true"
+#     volumes:
+#       - ./backend:/app                  # live-reload your code
+#       - /app/node_modules               # keep deps inside container
+#     healthcheck:
+#       test: ["CMD", "wget", "-qO-", "http://localhost:5050/healthz"]
+#       interval: 20s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 15s
+#     depends_on:
+#       lawfinder:
+#         condition: service_healthy
+#       risk_evaluator:
+#         condition: service_healthy
+#     restart: unless-stopped
+
+#   lawfinder:
+#     build:
+#       context: ./lawfinder_gemini_env
+#       dockerfile: Dockerfile
+#     image: lawfinder-gemini:latest
+#     container_name: lawfinder-gemini
+#     ports:
+#       - "8000:8000"
+#     env_file:
+#       - ./.env
+#     environment:
+#       UVICORN_WORKERS: "1"
+#     volumes:
+#       - ./lawfinder_gemini_env/indices:/app/indices
+#     healthcheck:
+#       test: ["CMD", "wget", "-qO-", "http://localhost:8000/healthz"]
+#       interval: 20s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 15s
+#     restart: unless-stopped
+
+#   risk_evaluator:
+#     build:
+#       context: ./risk_evaluator
+#       dockerfile: Dockerfile
+#     image: risk-evaluator:latest
+#     container_name: risk-evaluator
+#     ports:
+#       - "18002:18002"
+#     env_file:
+#       - ./.env
+#     environment:
+#       PORT: "18002"
+#     healthcheck:
+#       test: ["CMD", "wget", "-qO-", "http://localhost:18002/"]
+#       interval: 20s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 15s
+#     restart: unless-stopped
