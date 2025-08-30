@@ -3,6 +3,8 @@ import express from "express";
 import axios from "axios";
 import cors from "cors";
 import http from "http";
+import dotenv from "dotenv";
+import { Pool } from "pg";
 
 /* ================================
    Config
@@ -18,6 +20,13 @@ const AGENT2_URL =
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",")
   : ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: `postgresql://${process.env.PGUSER}:${process.env.PGPASSWORD}` +
+                    `@${process.env.PGHOST}:${process.env.PGPORT}/${process.env.PGDATABASE}`,
+});
 
 /* ================================
    App setup
@@ -45,7 +54,7 @@ app.use((req, _res, next) => {
 ================================ */
 app.get("/healthz", (_req, res) =>
   res.json({ ok: true, port: PORT, agent1: AGENT1_URL, agent2: AGENT2_URL })
-);
+); 
 
 app.get("/__routes", (_req, res) => {
   const routes = [];
@@ -313,6 +322,63 @@ app.post("/analyze", async (req, res) => {
 
     const score = a2Norm.score; // { value, rationale (joined top-3 why) }
 
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const runId = `run-${Date.now()}`;
+
+      const featureRes = await client.query(
+        `INSERT INTO feature_runs (run_id, run_time, feature_name, risk_score)
+         VALUES ($1, NOW(), $2, $3) RETURNING id`,
+        [runId, title.trim(), score?.value?.toString() || null]
+      );
+      const featureRunId = featureRes.rows[0].id;
+
+      // Insert regions
+      const regionIds = [];
+      for (const regionName of findings.regions_hit) {
+        const resRegion = await client.query(
+          `INSERT INTO regions (name) VALUES ($1)
+           ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`,
+          [regionName]
+        );
+        regionIds.push(resRegion.rows[0].id);
+      }
+
+      const regulationIds = [];
+      for (const regName of findings.regulations_hit) {
+        const resReg = await client.query(
+          `INSERT INTO regulations (name) VALUES ($1)
+           ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`,
+          [regName]
+        );
+        regulationIds.push(resReg.rows[0].id);
+      }
+
+      for (const rId of regionIds) {
+        await client.query(
+          `INSERT INTO run_regions (run_id, region_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [featureRunId, rId]
+        );
+      }
+
+      for (const regId of regulationIds) {
+        await client.query(
+          `INSERT INTO run_regulations (run_id, regulation_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [featureRunId, regId]
+        );
+      }
+
+      await client.query("COMMIT");
+      console.log(`Saved analysis run ${runId} to database`);
+    } catch (dbErr) {
+      await client.query("ROLLBACK");
+      console.error("[/analyze] DB error:", dbErr.message);
+    } finally {
+      client.release();
+    }
+
     return res.json({
       findings,
       score,
@@ -325,6 +391,46 @@ app.post("/analyze", async (req, res) => {
       detail: err?.message || "unknown",
       upstream: err?.response?.data,
     });
+  }
+});
+
+app.get("/feature-runs", async (_req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT fr.id,
+                fr.run_id,
+                fr.run_time,
+                fr.feature_name,
+                fr.risk_score,
+                COALESCE(
+                  ARRAY(
+                    SELECT r.name
+                    FROM run_regions rr
+                    JOIN regions r ON rr.region_id = r.id
+                    WHERE rr.run_id = fr.id
+                  ), '{}'
+                ) AS regions,
+                COALESCE(
+                  ARRAY(
+                    SELECT reg.name
+                    FROM run_regulations rrn
+                    JOIN regulations reg ON rrn.regulation_id = reg.id
+                    WHERE rrn.run_id = fr.id
+                  ), '{}'
+                ) AS regulations
+         FROM feature_runs fr
+         ORDER BY fr.run_time DESC
+         LIMIT 50`
+      );
+      res.json({ ok: true, runs: result.rows });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("[/feature-runs] DB error:", err.message);
+    res.status(500).json({ ok: false, error: "Failed to fetch feature runs" });
   }
 });
 
