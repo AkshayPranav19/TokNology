@@ -24,3 +24,18 @@ export async function runAnalyze({ title, description, regions }) {
   // data must be { findings, score, raw }
   return data;
 }
+
+export async function fetchAuditLogs() {
+  try {
+    const url = `${API_BASE}/feature-runs`;
+    const response = await axios.get(url, {
+      headers: { "Content-Type": "application/json" },
+      timeout: 15000,
+    });
+    const runs = response?.data?.runs;
+    return Array.isArray(runs) ? runs : [];
+  } catch (err) {
+    console.error("[fetchAuditLogs] error:", err);
+    return [];
+  }
+}
