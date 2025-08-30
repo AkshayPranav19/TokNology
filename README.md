@@ -1,4 +1,4 @@
-[README_TokNology (1).md](https://github.com/user-attachments/files/22059111/README_TokNology.1.md)
+
 # TokNology: Geo-Regulation & Risk Orchestrator
 
 A lightweight system that helps teams spot **region-specific legal requirements** and **risk hot-spots** for any product feature.
